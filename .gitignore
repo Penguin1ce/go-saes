@@ -1,0 +1,74 @@
+# 常见的 Git 忽略配置（Go 项目）
+./idea
+.vscode/
+# 可执行文件 / 构建产物
+/bin/
+/build/
+/dist/
+*.exe
+*.exe~
+*.dll
+*.so
+*.dylib
+*.test
+*.out
+coverage.out
+*.coverprofile
+
+# 依赖 / 缓存
+/vendor/
+Godeps/
+pkg/
+*/vendor/
+# Go module workspace
+go.work
+
+# 前端 (Vue)
+node_modules/
+.yarn/
+.yarn/cache/
+.pnp.*
+.vite/
+.nuxt/
+.output/
+*.tsbuildinfo
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+
+# IDE / 编辑器
+.vscode/
+.idea/
+*.iml
+*.ipr
+*.iws
+*.suo
+*.ntvs*
+*.njsproj
+*.sln
+
+# 操作系统
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# 临时文件 / 日志 / 环境变量
+*.log
+*.tmp
+*.swp
+*~
+.env
+.env.* 
+.env.local
+
+# 测试 / 临时目录
+/testdata/
+coverage/
+.cache/
+
+# 密钥 / 私密文件（示例）
+*.pem
+*.key
+secrets.yml
+credentials.json
