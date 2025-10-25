@@ -1,6 +1,7 @@
 package saes
 
 import (
+	"encoding/base64"
 	"fmt"
 	"log"
 	"strconv"
@@ -271,4 +272,97 @@ func gfMul(a, b byte) byte {
 
 func logState(label string, state [4]byte) {
 	log.Printf("%s -> 状态=%v (0x%04X)", label, state, stateToUint16(state))
+}
+
+// EncryptASCIIToBase64 将 ASCII 明文（按 2 字节分组）转换为 Base64 编码的密文。
+func EncryptASCIIToBase64(plaintext, key string) (string, error) {
+	log.Printf("EncryptASCIIToBase64: 输入明文=%q, 密钥=%s", plaintext, key)
+
+	if len(plaintext) == 0 {
+		return "", fmt.Errorf("明文不能为空")
+	}
+	for _, r := range plaintext {
+		if r > 0x7F {
+			return "", fmt.Errorf("检测到非 ASCII 字符: %q", r)
+		}
+	}
+
+	sanitizedKey := strings.ReplaceAll(strings.TrimSpace(key), " ", "")
+	rawBytes := []byte(plaintext)
+	needsPadding := len(rawBytes)%2 != 0
+	if needsPadding {
+		rawBytes = append(rawBytes, 0x00)
+	}
+
+	cipherBytes := make([]byte, 0, len(rawBytes))
+
+	for i := 0; i < len(rawBytes); i += 2 {
+		high := rawBytes[i]
+		low := rawBytes[i+1]
+		block := fmt.Sprintf("%08b%08b", high, low)
+		cipherBlock, err := EncryptBinary(block, sanitizedKey)
+		if err != nil {
+			return "", err
+		}
+		value, err := parseBinary16(cipherBlock)
+		if err != nil {
+			return "", fmt.Errorf("密文块解析失败: %w", err)
+		}
+		cipherBytes = append(cipherBytes, byte(value>>8), byte(value&0xFF))
+	}
+
+	encoded := base64.StdEncoding.EncodeToString(cipherBytes)
+	log.Printf("EncryptASCIIToBase64: 输出 Base64 密文=%s", encoded)
+	return encoded, nil
+}
+
+// DecryptBase64ToASCII 将 Base64 编码的密文解密为 ASCII 明文。
+func DecryptBase64ToASCII(ciphertext, key string) (string, error) {
+	log.Printf("DecryptBase64ToASCII: 输入密文=%s, 密钥=%s", ciphertext, key)
+
+	sanitizedCipher := strings.TrimSpace(ciphertext)
+	if sanitizedCipher == "" {
+		return "", fmt.Errorf("密文不能为空")
+	}
+
+	cipherBytes, err := base64.StdEncoding.DecodeString(sanitizedCipher)
+	if err != nil {
+		return "", fmt.Errorf("Base64 解码失败: %w", err)
+	}
+	if len(cipherBytes)%2 != 0 {
+		return "", fmt.Errorf("密文字节长度必须是 2 的倍数")
+	}
+
+	sanitizedKey := strings.ReplaceAll(strings.TrimSpace(key), " ", "")
+	resultBytes := make([]byte, 0, len(cipherBytes))
+
+	for i := 0; i < len(cipherBytes); i += 2 {
+		high := cipherBytes[i]
+		low := cipherBytes[i+1]
+		block := fmt.Sprintf("%08b%08b", high, low)
+		plainBlock, err := DecryptBinary(block, sanitizedKey)
+		if err != nil {
+			return "", err
+		}
+		value, err := parseBinary16(plainBlock)
+		if err != nil {
+			return "", fmt.Errorf("明文块解析失败: %w", err)
+		}
+		resultBytes = append(resultBytes, byte(value>>8), byte(value&0xFF))
+	}
+
+	// 去除可能的补位 0x00（仅用于保持 16 bit 分组）
+	if len(resultBytes) > 0 && resultBytes[len(resultBytes)-1] == 0x00 {
+		resultBytes = resultBytes[:len(resultBytes)-1]
+	}
+
+	result := string(resultBytes)
+	for _, r := range result {
+		if r > 0x7F {
+			return "", fmt.Errorf("解密结果包含非 ASCII 字符: %q", r)
+		}
+	}
+
+	log.Printf("DecryptBase64ToASCII: 输出明文=%q", result)
+	return result, nil
 }
