@@ -1,6 +1,7 @@
 package saes
 
 import (
+	"crypto/rand"
 	"encoding/base64"
 	"fmt"
 	"strconv"
@@ -371,4 +372,114 @@ func DecryptBase64ToASCII(ciphertext, key string) (string, error) {
 	}
 
 	return result, nil
+}
+
+// EncryptASCIIToBase64CBC 使用 CBC 模式对 ASCII 明文进行加密，返回 Base64 编码的密文与随机初始向量。
+func EncryptASCIIToBase64CBC(plaintext, key string) (string, string, error) {
+	if len(plaintext) == 0 {
+		return "", "", fmt.Errorf("明文不能为空")
+	}
+	for _, r := range plaintext {
+		if r > 0x7F {
+			return "", "", fmt.Errorf("检测到非 ASCII 字符: %q", r)
+		}
+	}
+
+	_, keys, err := parseKey(key)
+	if err != nil {
+		return "", "", fmt.Errorf("无法解析二进制密钥: %w", err)
+	}
+
+	iv, err := generateRandomBlock()
+	if err != nil {
+		return "", "", err
+	}
+
+	rawBytes := []byte(plaintext)
+	needsPadding := len(rawBytes)%2 != 0
+	if needsPadding {
+		rawBytes = append(rawBytes, 0x00)
+	}
+
+	cipherBlocks := make([]uint16, 0, len(rawBytes)/2)
+	prev := iv
+
+	for i := 0; i < len(rawBytes); i += 2 {
+		high := rawBytes[i]
+		low := rawBytes[i+1]
+		block := (uint16(high) << 8) | uint16(low)
+		chainInput := block ^ prev
+		enc := encryptWithKeys(chainInput, keys)
+		cipherBlocks = append(cipherBlocks, enc)
+		prev = enc
+	}
+
+	cipherBytes := make([]byte, 0, len(cipherBlocks)*2)
+	for _, block := range cipherBlocks {
+		cipherBytes = append(cipherBytes, byte(block>>8), byte(block&0xFF))
+	}
+
+	cipherBase64 := base64.StdEncoding.EncodeToString(cipherBytes)
+	ivHex := fmt.Sprintf("0x%04X", iv)
+	return cipherBase64, ivHex, nil
+}
+
+// DecryptBase64ToASCIICBC 使用 CBC 模式解密 Base64 编码的密文。
+func DecryptBase64ToASCIICBC(ciphertext, key, iv string) (string, error) {
+	_, keys, err := parseKey(key)
+	if err != nil {
+		return "", fmt.Errorf("无法解析密钥: %w", err)
+	}
+
+	sanitizedIV := strings.TrimSpace(iv)
+	if sanitizedIV == "" {
+		return "", fmt.Errorf("初始向量不能为空")
+	}
+	ivValue, err := parseBinary16(sanitizedIV)
+	if err != nil {
+		return "", fmt.Errorf("无法解析初始向量: %w", err)
+	}
+
+	sanitizedCipher := strings.TrimSpace(ciphertext)
+	if sanitizedCipher == "" {
+		return "", fmt.Errorf("密文不能为空")
+	}
+	cipherBytes, err := base64.StdEncoding.DecodeString(sanitizedCipher)
+	if err != nil {
+		return "", fmt.Errorf("密文 Base64 解码失败: %w", err)
+	}
+	if len(cipherBytes)%2 != 0 {
+		return "", fmt.Errorf("密文字节长度必须是 2 的倍数")
+	}
+
+	resultBytes := make([]byte, 0, len(cipherBytes))
+	prev := ivValue
+
+	for i := 0; i < len(cipherBytes); i += 2 {
+		block := (uint16(cipherBytes[i]) << 8) | uint16(cipherBytes[i+1])
+		dec := decryptWithKeys(block, keys)
+		plainBlock := dec ^ prev
+		resultBytes = append(resultBytes, byte(plainBlock>>8), byte(plainBlock&0xFF))
+		prev = block
+	}
+
+	if len(resultBytes) > 0 && resultBytes[len(resultBytes)-1] == 0x00 {
+		resultBytes = resultBytes[:len(resultBytes)-1]
+	}
+
+	for _, r := range resultBytes {
+		if r > 0x7F {
+			return "", fmt.Errorf("解密结果包含非 ASCII 字符: %q", r)
+		}
+	}
+
+	return string(resultBytes), nil
+}
+
+func generateRandomBlock() (uint16, error) {
+	var buf [2]byte
+	if _, err := rand.Read(buf[:]); err != nil {
+		return 0, fmt.Errorf("生成初始向量失败: %w", err)
+	}
+	return (uint16(buf[0]) << 8) | uint16(buf[1]), nil
 }

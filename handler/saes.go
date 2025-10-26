@@ -75,6 +75,41 @@ func DecryptBase64(c *gin.Context) {
 	respondSuccess(c, gin.H{"plaintext": plain})
 }
 
+func EncryptCBC(c *gin.Context) {
+	var req models.EncryptCBCRequest
+	if err := c.ShouldBindJSON(&req); err != nil {
+		respondError(c, http.StatusBadRequest, 1, err.Error())
+		return
+	}
+
+	cipher, iv, err := saes.EncryptASCIIToBase64CBC(req.Plaintext, req.Key)
+	if err != nil {
+		respondError(c, http.StatusBadRequest, 1, err.Error())
+		return
+	}
+
+	respondSuccess(c, gin.H{
+		"ciphertext": cipher,
+		"iv":         iv,
+	})
+}
+
+func DecryptCBC(c *gin.Context) {
+	var req models.DecryptCBCRequest
+	if err := c.ShouldBindJSON(&req); err != nil {
+		respondError(c, http.StatusBadRequest, 1, err.Error())
+		return
+	}
+
+	plain, err := saes.DecryptBase64ToASCIICBC(req.Ciphertext, req.Key, req.IV)
+	if err != nil {
+		respondError(c, http.StatusBadRequest, 1, err.Error())
+		return
+	}
+
+	respondSuccess(c, gin.H{"plaintext": plain})
+}
+
 func MeetInTheMiddleAttack(c *gin.Context) {
 	var req models.MeetInTheMiddleRequest
 	if err := c.ShouldBindJSON(&req); err != nil {

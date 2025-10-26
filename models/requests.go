@@ -20,6 +20,17 @@ type DecryptBase64Request struct {
 	Key        string `json:"key" binding:"required"`
 }
 
+type EncryptCBCRequest struct {
+	Plaintext string `json:"plaintext" binding:"required"`
+	Key       string `json:"key" binding:"required"`
+}
+
+type DecryptCBCRequest struct {
+	Ciphertext string `json:"ciphertext" binding:"required"`
+	Key        string `json:"key" binding:"required"`
+	IV         string `json:"iv" binding:"required"`
+}
+
 type AttackPair struct {
 	Plaintext  string `json:"plaintext" binding:"required"`
 	Ciphertext string `json:"ciphertext" binding:"required"`

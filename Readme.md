@@ -192,7 +192,101 @@
 - **注意事项**
   - Base64 解码后的字节长度必须为 2 的倍数，否则将返回错误。
 
-## 5. 中间相遇攻击接口
+## 5. CBC 十六进制加密接口
+- **URL**：`/encrypt/cbc`
+- **Method**：`POST`
+- **请求体**
+  ```json
+  {
+    "plaintext": "明文（ASCII 字符串，自动按 16 bit 分组加密）",
+    "key": "密钥（16 / 32 / 48 位二进制或十六进制字符串）"
+  }
+  ```
+- **响应体**
+  ```json
+  {
+    "code": 0,
+    "message": "success",
+    "data": {
+      "ciphertext": "密文（按 16 bit 分组的十六进制字符串，示例：0x1234 0xABCD ...）",
+      "iv": "初始向量（0x 前缀的 16 bit 十六进制字符串）"
+    }
+  }
+  ```
+- **示例**
+  ```http
+  POST /encrypt/cbc HTTP/1.1
+  Host: localhost:8080
+  Content-Type: application/json
+
+  {
+    "plaintext": "Mini S-AES CBC",
+    "key": "0001000000010000"
+  }
+  ```
+  ```json
+  HTTP/1.1 200 OK
+  {
+    "code": 0,
+    "message": "success",
+    "data": {
+      "ciphertext": "0x130B 0x6E3A 0xCC91 0xF1C1 0x1A47 0xD56E 0xD399",
+      "iv": "0x7D1C"
+    }
+  }
+  ```
+- **注意事项**
+  - 服务会为每次加密自动生成随机 16 bit 初始向量 (IV)，需要与密文一并传输给解密方。
+  - 明文若为奇数字节，将在末尾自动补 `0x00` 以满足 16 bit 分组，解密时会自动移除这类补位。
+
+## 6. CBC 十六进制解密接口
+- **URL**：`/decrypt/cbc`
+- **Method**：`POST`
+- **请求体**
+  ```json
+  {
+    "ciphertext": "密文（按 16 bit 分组的十六进制字符串，可使用空格/逗号分隔或连续书写）",
+    "key": "密钥（16 / 32 / 48 位二进制或十六进制字符串）",
+    "iv": "初始向量（0x 前缀的 16 bit 十六进制字符串，可写成 16 位二进制）"
+  }
+  ```
+- **响应体**
+  ```json
+  {
+    "code": 0,
+    "message": "success",
+    "data": {
+      "plaintext": "解密后的 ASCII 明文"
+    }
+  }
+  ```
+- **示例**
+  ```http
+  POST /decrypt/cbc HTTP/1.1
+  Host: localhost:8080
+  Content-Type: application/json
+
+  {
+    "ciphertext": "0x130B 0x6E3A 0xCC91 0xF1C1 0x1A47 0xD56E 0xD399",
+    "key": "0001000000010000",
+    "iv": "0x7D1C"
+  }
+  ```
+  ```json
+  HTTP/1.1 200 OK
+  {
+    "code": 0,
+    "message": "success",
+    "data": {
+      "plaintext": "Mini S-AES CBC"
+    }
+  }
+  ```
+- **注意事项**
+  - 解密方必须使用加密时提供的 IV；IV 不正确会导致解密失败或得到错误结果。
+  - IV 字符串支持 `0x` 前缀十六进制或 16 位二进制表示。
+
+## 7. 中间相遇攻击接口
 - **URL**：`/attack/meet-in-the-middle`
 - **Method**：`POST`
 - **请求体**
