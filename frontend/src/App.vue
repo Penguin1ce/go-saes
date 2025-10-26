@@ -6,12 +6,14 @@
     </header>
     <main class="app-main">
       <encrypt-decrypt-panel />
+      <multi-encrypt-panel class="multi-panel" />
     </main>
   </div>
 </template>
 
 <script setup>
 import EncryptDecryptPanel from './components/EncryptDecryptPanel.vue';
+import MultiEncryptPanel from './components/MultiEncryptPanel.vue';
 </script>
 
 <style scoped>
@@ -46,5 +48,12 @@ import EncryptDecryptPanel from './components/EncryptDecryptPanel.vue';
 
 .app-main {
   width: min(960px, 100%);
+  display: flex;
+  flex-direction: column;
+  gap: 24px;
+}
+
+.multi-panel {
+  margin-top: 8px;
 }
 </style>
