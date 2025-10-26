@@ -39,7 +39,6 @@
             >
               <el-input
                 v-model="pair.plaintext"
-                placeholder="示例：0x6574 或 0110010101110100"
                 maxlength="18"
                 show-word-limit
               />
@@ -51,7 +50,6 @@
             >
               <el-input
                 v-model="pair.ciphertext"
-                placeholder="示例：0x9920 或 1001100100100000"
                 maxlength="18"
                 show-word-limit
               />

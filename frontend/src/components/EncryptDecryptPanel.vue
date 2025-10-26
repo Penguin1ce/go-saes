@@ -26,11 +26,11 @@
             @submit.prevent>
             <div class="form-row">
               <el-form-item label="明文（16 位二进制）" prop="plaintext">
-                <el-input v-model="encryptBinaryForm.plaintext" placeholder="示例：0110010101110100" maxlength="16"
+                <el-input v-model="encryptBinaryForm.plaintext" maxlength="16"
                   show-word-limit />
               </el-form-item>
               <el-form-item label="密钥（16 位二进制或十六进制）" prop="key">
-                <el-input v-model="encryptBinaryForm.key" placeholder="示例：0001000000010000 或 0x1010" maxlength="18"
+                <el-input v-model="encryptBinaryForm.key" maxlength="18"
                   show-word-limit />
               </el-form-item>
             </div>
@@ -48,11 +48,11 @@
             @submit.prevent>
             <div class="form-row">
               <el-form-item label="明文（16 位十六进制）" prop="plaintext">
-                <el-input v-model="encryptHexForm.plaintext" placeholder="示例：0x6574 或 6574" maxlength="6"
+                <el-input v-model="encryptHexForm.plaintext" maxlength="6"
                   show-word-limit />
               </el-form-item>
               <el-form-item label="密钥（16 位十六进制）" prop="key">
-                <el-input v-model="encryptHexForm.key" placeholder="示例：0x1010 或 1010" maxlength="6" show-word-limit />
+                <el-input v-model="encryptHexForm.key" maxlength="6" show-word-limit />
               </el-form-item>
             </div>
             <el-form-item>
@@ -69,10 +69,10 @@
             @submit.prevent>
             <div class="form-row">
               <el-form-item label="明文（ASCII，自动按 16 bit 补齐）" prop="plaintext">
-                <el-input v-model="encryptBase64Form.plaintext" placeholder="示例：et 或 ete" />
+                <el-input v-model="encryptBase64Form.plaintext" />
               </el-form-item>
               <el-form-item label="密钥（16 位二进制或十六进制）" prop="key">
-                <el-input v-model="encryptBase64Form.key" placeholder="示例：0001000000010000 或 0x1010" maxlength="18"
+                <el-input v-model="encryptBase64Form.key" maxlength="18"
                   show-word-limit />
               </el-form-item>
             </div>
@@ -106,11 +106,11 @@
             @submit.prevent>
             <div class="form-row">
               <el-form-item label="密文（16 位二进制）" prop="ciphertext">
-                <el-input v-model="decryptBinaryForm.ciphertext" placeholder="示例：1111001010110011" maxlength="16"
+                <el-input v-model="decryptBinaryForm.ciphertext" maxlength="16"
                   show-word-limit />
               </el-form-item>
               <el-form-item label="密钥（16 位二进制或十六进制）" prop="key">
-                <el-input v-model="decryptBinaryForm.key" placeholder="示例：0001000000010000 或 0x1010" maxlength="18"
+                <el-input v-model="decryptBinaryForm.key" maxlength="18"
                   show-word-limit />
               </el-form-item>
             </div>
@@ -128,11 +128,11 @@
             @submit.prevent>
             <div class="form-row">
               <el-form-item label="密文（16 位十六进制）" prop="ciphertext">
-                <el-input v-model="decryptHexForm.ciphertext" placeholder="示例：0x3B97 或 3B97" maxlength="6"
+                <el-input v-model="decryptHexForm.ciphertext" maxlength="6"
                   show-word-limit />
               </el-form-item>
               <el-form-item label="密钥（16 位十六进制）" prop="key">
-                <el-input v-model="decryptHexForm.key" placeholder="示例：0x1010 或 1010" maxlength="6" show-word-limit />
+                <el-input v-model="decryptHexForm.key" maxlength="6" show-word-limit />
               </el-form-item>
             </div>
             <el-form-item>
@@ -149,10 +149,10 @@
             @submit.prevent>
             <div class="form-row">
               <el-form-item label="密文（Base64）" prop="ciphertext">
-                <el-input v-model="decryptBase64Form.ciphertext" placeholder="示例：BPo=" />
+                <el-input v-model="decryptBase64Form.ciphertext" />
               </el-form-item>
               <el-form-item label="密钥（16 位二进制或十六进制）" prop="key">
-                <el-input v-model="decryptBase64Form.key" placeholder="示例：0001000000010000 或 0x1010" maxlength="18"
+                <el-input v-model="decryptBase64Form.key" maxlength="18"
                   show-word-limit />
               </el-form-item>
             </div>

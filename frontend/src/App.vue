@@ -8,12 +8,14 @@
       <encrypt-decrypt-panel />
       <multi-encrypt-panel class="multi-panel" />
       <meet-in-the-middle-panel class="mitm-panel" />
+      <CBCPanel class="cbc-panel" />
     </main>
   </div>
 </template>
 
 <script setup>
 import EncryptDecryptPanel from './components/EncryptDecryptPanel.vue';
+import CBCPanel from './components/CBCPanel.vue';
 import MultiEncryptPanel from './components/MultiEncryptPanel.vue';
 import MeetInTheMiddlePanel from './components/MeetInTheMiddlePanel.vue';
 </script>
@@ -53,6 +55,10 @@ import MeetInTheMiddlePanel from './components/MeetInTheMiddlePanel.vue';
   display: flex;
   flex-direction: column;
   gap: 24px;
+}
+
+.cbc-panel {
+  margin-top: 8px;
 }
 
 .multi-panel {

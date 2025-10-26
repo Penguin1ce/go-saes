@@ -3,7 +3,11 @@
 ## 基础信息
 - 服务地址：`http://localhost:8080`
 - 统一请求头：`Content-Type: application/json`
-- 密钥说明：支持 16 / 32 / 48 位二进制或十六进制密钥（十六进制可带 `0x` 前缀）。16 位密钥执行标准 S-AES；32 位密钥拆分为 K1、K2 顺序执行双重加解密；48 位密钥拆分为 K1、K2、K3 顺序执行三重加解密（加密方向为 K1→K2→K3，解密方向为 K3→K2→K1）。
+- 密钥说明：支持 16 / 32 / 48 位二进制或十六进制密钥（十六进制可带 `0x` 前缀）。
+  - 16 位密钥执行标准 S-AES；
+  - 32 位密钥拆分为 K1、K2 顺序执行双重加解密；
+  - 48 位密钥拆分为 K1、K2、K3 顺序执行三重加解密（加密方向为 K1→K2→K3，解密方向为 K3→K2→K1）。
+
 - 十六进制示例：`0x6574`（16 位数据块）、`0x1010`（16 位密钥）、`0x1010F0F0`（32 位密钥，表示 K1=0x1010、K2=0xF0F0）、`0x1010F0F00F0F`（48 位密钥，表示 K1=0x1010、K2=0xF0F0、K3=0x0F0F）。
 
 ## 1. 加密接口
@@ -31,7 +35,7 @@
   POST /encrypt HTTP/1.1
   Host: localhost:8080
   Content-Type: application/json
-
+  
   {
     "plaintext": "0110010101110100",
     "key": "0001000000010000"
@@ -80,7 +84,7 @@
   POST /decrypt HTTP/1.1
   Host: localhost:8080
   Content-Type: application/json
-
+  
   {
     "ciphertext": "1111001010110011",
     "key": "0001000000010000"
@@ -129,7 +133,7 @@
   POST /encrypt/base64 HTTP/1.1
   Host: localhost:8080
   Content-Type: application/json
-
+  
   {
     "plaintext": "et",
     "key": "0001000000010000"
@@ -173,7 +177,7 @@
   POST /decrypt/base64 HTTP/1.1
   Host: localhost:8080
   Content-Type: application/json
-
+  
   {
     "ciphertext": "BPo=",
     "key": "0001000000010000"
@@ -218,7 +222,7 @@
   POST /encrypt/cbc HTTP/1.1
   Host: localhost:8080
   Content-Type: application/json
-
+  
   {
     "plaintext": "Mini S-AES CBC",
     "key": "0001000000010000"
@@ -265,7 +269,7 @@
   POST /decrypt/cbc HTTP/1.1
   Host: localhost:8080
   Content-Type: application/json
-
+  
   {
     "ciphertext": "0x130B 0x6E3A 0xCC91 0xF1C1 0x1A47 0xD56E 0xD399",
     "key": "0001000000010000",
@@ -328,7 +332,7 @@
   POST /attack/meet-in-the-middle HTTP/1.1
   Host: localhost:8080
   Content-Type: application/json
-
+  
   {
     "pairs": [
       {
@@ -368,7 +372,7 @@
   POST /encrypt HTTP/1.1
   Host: localhost:8080
   Content-Type: application/json
-
+  
   {
     "plaintext": "0110010101110100",
     "key": "00010000000100001111000011110000"
@@ -390,7 +394,7 @@
   POST /encrypt/base64 HTTP/1.1
   Host: localhost:8080
   Content-Type: application/json
-
+  
   {
     "plaintext": "et",
     "key": "00010000000100001111000011110000"
@@ -411,7 +415,7 @@
   POST /encrypt HTTP/1.1
   Host: localhost:8080
   Content-Type: application/json
-
+  
   {
     "plaintext": "0x6574",
     "key": "0x1010F0F00F0F"
@@ -433,7 +437,7 @@
   POST /encrypt/base64 HTTP/1.1
   Host: localhost:8080
   Content-Type: application/json
-
+  
   {
     "plaintext": "et",
     "key": "0x1010F0F00F0F"
