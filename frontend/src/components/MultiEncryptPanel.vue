@@ -4,13 +4,20 @@
       <div class="card-header">
         <div class="card-title">
           <span>多重加解密面板</span>
-          <el-tag size="small" type="warning" effect="light">16 位分组 / 32 位密钥</el-tag>
+          <el-tag size="small" type="warning" effect="light">{{ keyModeTagText }}</el-tag>
         </div>
         <p class="card-subtitle">
-          使用 32 位密钥（K1 + K2）执行顺序多重 S-AES 加解密操作
+          {{ keyModeSubtitle }}
         </p>
       </div>
     </template>
+    <div class="key-mode">
+      <span class="key-mode__label">密钥模式</span>
+      <el-radio-group v-model="keyMode" size="small">
+        <el-radio-button label="double">双重（K1 + K2）</el-radio-button>
+        <el-radio-button label="triple">三重（K1 + K2 + K3）</el-radio-button>
+      </el-radio-group>
+    </div>
     <el-tabs v-model="activeTab">
       <el-tab-pane label="加密" name="encrypt">
         <div class="mode-switch">
@@ -29,9 +36,9 @@
                 <el-input v-model="encryptBinaryForm.plaintext" placeholder="示例：0110010101110100" maxlength="16"
                   show-word-limit />
               </el-form-item>
-              <el-form-item label="密钥（32 位二进制或十六进制）" prop="key">
-                <el-input v-model="encryptBinaryForm.key" placeholder="示例：00010000000100001111000011110000 或 0x1010F0F0"
-                  maxlength="34" show-word-limit />
+              <el-form-item :label="binaryKeyLabel" prop="key">
+                <el-input v-model="encryptBinaryForm.key" :placeholder="binaryKeyPlaceholder" maxlength="50"
+                  show-word-limit />
               </el-form-item>
             </div>
             <el-form-item>
@@ -51,8 +58,8 @@
                 <el-input v-model="encryptHexForm.plaintext" placeholder="示例：0x6574 或 6574" maxlength="6"
                   show-word-limit />
               </el-form-item>
-              <el-form-item label="密钥（32 位十六进制）" prop="key">
-                <el-input v-model="encryptHexForm.key" placeholder="示例：0x1010F0F0 或 1010F0F0" maxlength="10"
+              <el-form-item :label="hexKeyLabel" prop="key">
+                <el-input v-model="encryptHexForm.key" :placeholder="hexKeyPlaceholder" maxlength="20"
                   show-word-limit />
               </el-form-item>
             </div>
@@ -72,9 +79,9 @@
               <el-form-item label="明文（ASCII，自动按 16 bit 补齐）" prop="plaintext">
                 <el-input v-model="encryptBase64Form.plaintext" placeholder="示例：et 或 ete" />
               </el-form-item>
-              <el-form-item label="密钥（32 位二进制或十六进制）" prop="key">
-                <el-input v-model="encryptBase64Form.key" placeholder="示例：00010000000100001111000011110000 或 0x1010F0F0"
-                  maxlength="34" show-word-limit />
+              <el-form-item :label="binaryKeyLabel" prop="key">
+                <el-input v-model="encryptBase64Form.key" :placeholder="binaryKeyPlaceholder" maxlength="50"
+                  show-word-limit />
               </el-form-item>
             </div>
             <el-form-item>
@@ -110,9 +117,9 @@
                 <el-input v-model="decryptBinaryForm.ciphertext" placeholder="示例：1001100100100000" maxlength="16"
                   show-word-limit />
               </el-form-item>
-              <el-form-item label="密钥（32 位二进制或十六进制）" prop="key">
-                <el-input v-model="decryptBinaryForm.key" placeholder="示例：00010000000100001111000011110000 或 0x1010F0F0"
-                  maxlength="34" show-word-limit />
+              <el-form-item :label="binaryKeyLabel" prop="key">
+                <el-input v-model="decryptBinaryForm.key" :placeholder="binaryKeyPlaceholder" maxlength="50"
+                  show-word-limit />
               </el-form-item>
             </div>
             <el-form-item>
@@ -132,8 +139,8 @@
                 <el-input v-model="decryptHexForm.ciphertext" placeholder="示例：0x3B97 或 3B97" maxlength="6"
                   show-word-limit />
               </el-form-item>
-              <el-form-item label="密钥（32 位十六进制）" prop="key">
-                <el-input v-model="decryptHexForm.key" placeholder="示例：0x1010F0F0 或 1010F0F0" maxlength="10"
+              <el-form-item :label="hexKeyLabel" prop="key">
+                <el-input v-model="decryptHexForm.key" :placeholder="hexKeyPlaceholder" maxlength="20"
                   show-word-limit />
               </el-form-item>
             </div>
@@ -153,9 +160,9 @@
               <el-form-item label="密文（Base64）" prop="ciphertext">
                 <el-input v-model="decryptBase64Form.ciphertext" placeholder="示例：mSA=" />
               </el-form-item>
-              <el-form-item label="密钥（32 位二进制或十六进制）" prop="key">
-                <el-input v-model="decryptBase64Form.key" placeholder="示例：00010000000100001111000011110000 或 0x1010F0F0"
-                  maxlength="34" show-word-limit />
+              <el-form-item :label="binaryKeyLabel" prop="key">
+                <el-input v-model="decryptBase64Form.key" :placeholder="binaryKeyPlaceholder" maxlength="50"
+                  show-word-limit />
               </el-form-item>
             </div>
             <el-form-item>
@@ -179,15 +186,32 @@
 </template>
 
 <script setup>
-import { reactive, ref, watch } from 'vue';
+import { reactive, ref, watch, computed } from 'vue';
 import { ElMessage } from 'element-plus';
 import httpClient from '../api/httpClient';
 
 const BLOCK_BITS = 16;
 const BLOCK_HEX_DIGITS = 4;
-const KEY_BITS = 32;
-const KEY_HEX_DIGITS = 8;
+const KEY_SCHEMES = {
+  double: {
+    bits: 32,
+    hexDigits: 8,
+    tag: '16 位分组 / 32 位密钥',
+    subtitle: '使用 32 位密钥（K1 + K2）执行顺序多重 S-AES 加解密操作',
+    binaryPlaceholder: '示例：00010000000100001111000011110000 或 0x1010F0F0',
+    hexPlaceholder: '示例：0x1010F0F0 或 1010F0F0'
+  },
+  triple: {
+    bits: 48,
+    hexDigits: 12,
+    tag: '16 位分组 / 48 位密钥',
+    subtitle: '使用 48 位密钥（K1 + K2 + K3）执行顺序多重 S-AES 加解密操作',
+    binaryPlaceholder: '示例：000100000001000011110000111100000000111100001111 或 0x1010F0F00F0F',
+    hexPlaceholder: '示例：0x1010F0F00F0F 或 1010F0F00F0F'
+  }
+};
 
+const keyMode = ref('double');
 const activeTab = ref('encrypt');
 const encryptMode = ref('binary');
 const decryptMode = ref('binary');
@@ -219,6 +243,15 @@ const encryptResult = ref('');
 const encryptResultMode = ref('binary');
 const decryptResult = ref('');
 const decryptResultMode = ref('binary');
+
+const keyBits = computed(() => KEY_SCHEMES[keyMode.value].bits);
+const keyHexDigits = computed(() => KEY_SCHEMES[keyMode.value].hexDigits);
+const keyModeTagText = computed(() => KEY_SCHEMES[keyMode.value].tag);
+const keyModeSubtitle = computed(() => KEY_SCHEMES[keyMode.value].subtitle);
+const binaryKeyLabel = computed(() => `密钥（${keyBits.value} 位二进制或十六进制）`);
+const hexKeyLabel = computed(() => `密钥（${keyHexDigits.value} 位十六进制）`);
+const binaryKeyPlaceholder = computed(() => KEY_SCHEMES[keyMode.value].binaryPlaceholder);
+const hexKeyPlaceholder = computed(() => KEY_SCHEMES[keyMode.value].hexPlaceholder);
 
 const sanitizeBinary = (value) => value.replace(/\s+/g, '').trim();
 const sanitizeHex = (value) => value.replace(/\s+/g, '').trim();
@@ -264,22 +297,12 @@ const createHexValidator = (hexDigits) => (_rule, value, callback) => {
   }
 };
 
-const createBinaryOrHexValidator = (bits) => (_rule, value, callback) => {
-  if (!value) {
-    callback(new Error(`请输入 ${bits} 位二进制或十六进制字符串`));
-    return;
-  }
+const validateBinaryOrHexWithBits = (value, bits, hexDigits) => {
   const sanitized = sanitizeBinary(value);
   if (new RegExp(`^[01]{${bits}}$`).test(sanitized)) {
-    callback();
     return;
   }
-  try {
-    normalizeHex(value, bits / 4);
-    callback();
-  } catch (error) {
-    callback(error instanceof Error ? error : new Error('格式不正确'));
-  }
+  normalizeHex(value, hexDigits);
 };
 
 const base64Validator = (_rule, value, callback) => {
@@ -313,9 +336,36 @@ const asciiValidator = (_rule, value, callback) => {
 };
 
 const binaryBlockValidator = createBinaryValidator(BLOCK_BITS);
-const binaryOrHexKeyValidator = createBinaryOrHexValidator(KEY_BITS);
 const hexBlockValidator = createHexValidator(BLOCK_HEX_DIGITS);
-const hexKeyValidator = createHexValidator(KEY_HEX_DIGITS);
+const getKeyBits = () => keyBits.value;
+const getKeyHexDigits = () => keyHexDigits.value;
+
+const binaryOrHexKeyValidator = (_rule, value, callback) => {
+  const bits = getKeyBits();
+  const hexDigits = getKeyHexDigits();
+  if (!value) {
+    callback(new Error(`请输入 ${bits} 位二进制或十六进制字符串`));
+    return;
+  }
+  try {
+    validateBinaryOrHexWithBits(value, bits, hexDigits);
+    callback();
+  } catch (error) {
+    const err = error instanceof Error ? error : new Error('格式不正确');
+    callback(err);
+  }
+};
+
+const hexKeyValidator = (_rule, value, callback) => {
+  const hexDigits = getKeyHexDigits();
+  try {
+    normalizeHex(value, hexDigits);
+    callback();
+  } catch (error) {
+    const err = error instanceof Error ? error : new Error('十六进制格式不正确');
+    callback(err);
+  }
+};
 
 const binaryFormRules = {
   plaintext: [{ validator: binaryBlockValidator, trigger: 'blur' }],
@@ -381,12 +431,36 @@ watch(decryptMode, (mode) => {
   }
 });
 
-const prepareBinaryOrHexValue = (value, bits) => {
+watch(keyMode, () => {
+  const keyForms = [
+    encryptBinaryForm,
+    encryptHexForm,
+    encryptBase64Form,
+    decryptBinaryForm,
+    decryptHexForm,
+    decryptBase64Form
+  ];
+  keyForms.forEach((form) => {
+    form.key = '';
+  });
+  encryptResult.value = '';
+  decryptResult.value = '';
+  encryptBinaryFormRef.value?.clearValidate();
+  encryptHexFormRef.value?.clearValidate();
+  encryptBase64FormRef.value?.clearValidate();
+  decryptBinaryFormRef.value?.clearValidate();
+  decryptHexFormRef.value?.clearValidate();
+  decryptBase64FormRef.value?.clearValidate();
+});
+
+const prepareBinaryOrHexKey = (value) => {
+  const bits = getKeyBits();
+  const hexDigits = getKeyHexDigits();
   const sanitized = sanitizeBinary(value);
   if (new RegExp(`^[01]{${bits}}$`).test(sanitized)) {
     return sanitized;
   }
-  return normalizeHex(value, bits / 4);
+  return normalizeHex(value, hexDigits);
 };
 
 const binaryToHex = (binary) => {
@@ -407,7 +481,7 @@ const handleEncryptBinary = async () => {
   try {
     const payload = {
       plaintext: sanitizeBinary(encryptBinaryForm.plaintext),
-      key: prepareBinaryOrHexValue(encryptBinaryForm.key, KEY_BITS)
+      key: prepareBinaryOrHexKey(encryptBinaryForm.key)
     };
     encryptBinaryForm.plaintext = payload.plaintext;
     encryptBinaryForm.key = payload.key;
@@ -444,7 +518,7 @@ const handleEncryptHex = async () => {
   try {
     const payload = {
       plaintext: normalizeHex(encryptHexForm.plaintext, BLOCK_HEX_DIGITS),
-      key: normalizeHex(encryptHexForm.key, KEY_HEX_DIGITS)
+      key: normalizeHex(encryptHexForm.key, getKeyHexDigits())
     };
     encryptHexForm.plaintext = payload.plaintext;
     encryptHexForm.key = payload.key;
@@ -481,7 +555,7 @@ const handleEncryptBase64 = async () => {
   try {
     const payload = {
       plaintext: encryptBase64Form.plaintext,
-      key: prepareBinaryOrHexValue(encryptBase64Form.key, KEY_BITS)
+      key: prepareBinaryOrHexKey(encryptBase64Form.key)
     };
     encryptBase64Form.key = payload.key;
 
@@ -517,7 +591,7 @@ const handleDecryptBinary = async () => {
   try {
     const payload = {
       ciphertext: sanitizeBinary(decryptBinaryForm.ciphertext),
-      key: prepareBinaryOrHexValue(decryptBinaryForm.key, KEY_BITS)
+      key: prepareBinaryOrHexKey(decryptBinaryForm.key)
     };
     decryptBinaryForm.ciphertext = payload.ciphertext;
     decryptBinaryForm.key = payload.key;
@@ -554,7 +628,7 @@ const handleDecryptHex = async () => {
   try {
     const payload = {
       ciphertext: normalizeHex(decryptHexForm.ciphertext, BLOCK_HEX_DIGITS),
-      key: normalizeHex(decryptHexForm.key, KEY_HEX_DIGITS)
+      key: normalizeHex(decryptHexForm.key, getKeyHexDigits())
     };
     decryptHexForm.ciphertext = payload.ciphertext;
     decryptHexForm.key = payload.key;
@@ -591,7 +665,7 @@ const handleDecryptBase64 = async () => {
   try {
     const payload = {
       ciphertext: sanitizeBase64(decryptBase64Form.ciphertext),
-      key: prepareBinaryOrHexValue(decryptBase64Form.key, KEY_BITS)
+      key: prepareBinaryOrHexKey(decryptBase64Form.key)
     };
     decryptBase64Form.ciphertext = payload.ciphertext;
     decryptBase64Form.key = payload.key;
@@ -709,5 +783,17 @@ const resetDecryptBase64 = () => {
 
 .mode-switch {
   margin-bottom: 1rem;
+}
+
+.key-mode {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 1.5rem;
+}
+
+.key-mode__label {
+  color: #606266;
+  font-size: 0.9rem;
 }
 </style>
