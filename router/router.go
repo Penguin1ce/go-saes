@@ -13,4 +13,5 @@ func InitRouter(r *gin.Engine) {
 	r.POST("/decrypt", handler.Decrypt)
 	r.POST("/encrypt/base64", handler.EncryptBase64)
 	r.POST("/decrypt/base64", handler.DecryptBase64)
+	r.POST("/attack/meet-in-the-middle", handler.MeetInTheMiddleAttack)
 }

@@ -3,7 +3,6 @@ package saes
 import (
 	"encoding/base64"
 	"fmt"
-	"log"
 	"strconv"
 	"strings"
 )
@@ -16,59 +15,45 @@ var (
 
 // EncryptBinary 接受16位（二进制字符串）明文与密钥，返回16位密文字符串。
 func EncryptBinary(plaintext, key string) (string, error) {
-	log.Printf("EncryptBinary: 输入明文=%s, 密钥=%s", plaintext, key)
-
 	pt, err := parseBinary16(plaintext)
 	if err != nil {
-		log.Printf("EncryptBinary: 解析明文失败: %v", err)
 		return "", fmt.Errorf("无法解析二进制明文: %w", err)
 	}
 
-	sanitizedKey, k1, k2, isDouble, err := parseKey(key)
+	_, k1, k2, isDouble, err := parseKey(key)
 	if err != nil {
-		log.Printf("EncryptBinary: 解析密钥失败: %v", err)
 		return "", fmt.Errorf("无法解析二进制密钥: %w", err)
 	}
 
 	var block uint16
 	if isDouble {
-		log.Printf("EncryptBinary: 使用 32 位密钥 %s (K1=0x%04X, K2=0x%04X)", sanitizedKey, k1, k2)
-		block = doubleEncrypt(pt, k1, k2, "EncryptBinary")
+		block = doubleEncrypt(pt, k1, k2)
 	} else {
-		log.Printf("EncryptBinary: 使用 16 位密钥 %s", sanitizedKey)
-		block = encryptBlock(pt, k1, "EncryptBinary")
+		block = encryptBlock(pt, k1)
 	}
 	result := fmt.Sprintf("%016b", block)
-	log.Printf("EncryptBinary: 输出密文=%s", result)
 	return result, nil
 }
 
 // DecryptBinary 接受16位（二进制字符串）密文与密钥，返回16位明文字符串。
 func DecryptBinary(ciphertext, key string) (string, error) {
-	log.Printf("DecryptBinary: 输入密文=%s, 密钥=%s", ciphertext, key)
-
 	ct, err := parseBinary16(ciphertext)
 	if err != nil {
-		log.Printf("DecryptBinary: 解析密文失败: %v", err)
 		return "", fmt.Errorf("无法解析二进制密文: %w", err)
 	}
 
-	sanitizedKey, k1, k2, isDouble, err := parseKey(key)
+	_, k1, k2, isDouble, err := parseKey(key)
 	if err != nil {
-		log.Printf("DecryptBinary: 解析密钥失败: %v", err)
 		return "", fmt.Errorf("无法解析二进制密钥: %w", err)
 	}
 
 	var block uint16
 	if isDouble {
-		log.Printf("DecryptBinary: 使用 32 位密钥 %s (K1=0x%04X, K2=0x%04X)", sanitizedKey, k1, k2)
-		block = doubleDecrypt(ct, k1, k2, "DecryptBinary")
+		block = doubleDecrypt(ct, k1, k2)
 	} else {
-		log.Printf("DecryptBinary: 使用 16 位密钥 %s", sanitizedKey)
-		block = decryptBlock(ct, k1, "DecryptBinary")
+		block = decryptBlock(ct, k1)
 	}
 	result := fmt.Sprintf("%016b", block)
-	log.Printf("DecryptBinary: 输出明文=%s", result)
 	return result, nil
 }
 
@@ -109,17 +94,15 @@ func parseBinary16(input string) (uint16, error) {
 			return 0, fmt.Errorf("无法解析十六进制输入: %w", err)
 		}
 		res := uint16(parsed)
-		log.Printf("parseBinary16: 输入(HEX)=%s, 输出=0x%04X", strings.ToUpper(value), res)
 		return res, nil
 	}
 
-	parsed, sanitized, err := parseBinary(value, 16)
+	parsed, _, err := parseBinary(value, 16)
 	if err != nil {
 		return 0, err
 	}
 
 	res := uint16(parsed)
-	log.Printf("parseBinary16: 输入(BIN)=%s, 输出=0x%04X", sanitized, res)
 	return res, nil
 }
 
@@ -140,7 +123,6 @@ func parseKey(key string) (string, uint16, uint16, bool, error) {
 			}
 			k1 := uint16(parsed)
 			formatted := "0x" + strings.ToUpper(hexPart)
-			log.Printf("parseKey: 输入=%s, 模式=单轮(HEX), K=0x%04X", formatted, k1)
 			return formatted, k1, 0, false, nil
 		case 8:
 			parsed, err := strconv.ParseUint(hexPart, 16, 32)
@@ -150,7 +132,6 @@ func parseKey(key string) (string, uint16, uint16, bool, error) {
 			k1 := uint16(parsed >> 16)
 			k2 := uint16(parsed & 0xFFFF)
 			formatted := "0x" + strings.ToUpper(hexPart)
-			log.Printf("parseKey: 输入=%s, 模式=双重(HEX), K1=0x%04X, K2=0x%04X", formatted, k1, k2)
 			return formatted, k1, k2, true, nil
 		default:
 			return "", 0, 0, false, fmt.Errorf("十六进制密钥长度必须为 4 或 8 个字符")
@@ -163,7 +144,6 @@ func parseKey(key string) (string, uint16, uint16, bool, error) {
 		if err != nil {
 			return "", 0, 0, false, err
 		}
-		log.Printf("parseKey: 输入=%s, 模式=单轮(BIN), K=0x%04X", sanitized, k1)
 		return sanitized, k1, 0, false, nil
 	case 32:
 		parsed, binary, err := parseBinary(sanitized, 32)
@@ -172,106 +152,56 @@ func parseKey(key string) (string, uint16, uint16, bool, error) {
 		}
 		k1 := uint16(parsed >> 16)
 		k2 := uint16(parsed & 0xFFFF)
-		log.Printf("parseKey: 输入=%s, 模式=双重(BIN), K1=0x%04X, K2=0x%04X", binary, k1, k2)
 		return binary, k1, k2, true, nil
 	default:
 		return "", 0, 0, false, fmt.Errorf("密钥必须是16位或32位二进制字符串，或对应长度的十六进制字符串（可带0x前缀）")
 	}
 }
 
-func doubleEncrypt(block uint16, k1, k2 uint16, prefix string) uint16 {
-	first := encryptBlock(block, k1, prefix+" 第一次加密")
-	return encryptBlock(first, k2, prefix+" 第二次加密")
+func doubleEncrypt(block uint16, k1, k2 uint16) uint16 {
+	first := encryptBlock(block, k1)
+	return encryptBlock(first, k2)
 }
 
-func doubleDecrypt(block uint16, k1, k2 uint16, prefix string) uint16 {
-	first := decryptBlock(block, k2, prefix+" 第一次解密")
-	return decryptBlock(first, k1, prefix+" 第二次解密")
+func doubleDecrypt(block uint16, k1, k2 uint16) uint16 {
+	first := decryptBlock(block, k2)
+	return decryptBlock(first, k1)
 }
 
-func encryptBlock(block uint16, key uint16, prefix string) uint16 {
+func encryptBlock(block uint16, key uint16) uint16 {
 	roundKeys := expandKey(key)
-	log.Printf("%s: 输入分组=0x%04X, 子密钥=0x%04X", prefix, block, key)
-	log.Printf("%s: 轮密钥=%v", prefix, roundKeys)
-
 	state := uint16ToState(block)
-	logState(fmt.Sprintf("%s: 初始状态", prefix), state)
 
 	state = addRoundKey(state, roundKeys[0])
-	logState(fmt.Sprintf("%s: 执行 addRoundKey(K0)", prefix), state)
-
 	state = subNib(state, sBox)
-	logState(fmt.Sprintf("%s: 执行 subNib→Sbox", prefix), state)
-
 	state = shiftRows(state)
-	logState(fmt.Sprintf("%s: 执行 shiftRows", prefix), state)
-
 	state = mixColumns(state)
-	logState(fmt.Sprintf("%s: 执行 mixColumns", prefix), state)
-
 	state = addRoundKey(state, roundKeys[1])
-	logState(fmt.Sprintf("%s: 执行 addRoundKey(K1)", prefix), state)
-
 	state = subNib(state, sBox)
-	logState(fmt.Sprintf("%s: 执行第二轮 subNib→Sbox", prefix), state)
-
 	state = shiftRows(state)
-	logState(fmt.Sprintf("%s: 执行第二轮 shiftRows", prefix), state)
-
 	state = addRoundKey(state, roundKeys[2])
-	logState(fmt.Sprintf("%s: 执行 addRoundKey(K2)", prefix), state)
 
-	result := stateToUint16(state)
-	log.Printf("%s: 输出分组=0x%04X", prefix, result)
-	return result
+	return stateToUint16(state)
 }
 
-func decryptBlock(block uint16, key uint16, prefix string) uint16 {
+func decryptBlock(block uint16, key uint16) uint16 {
 	roundKeys := expandKey(key)
-	log.Printf("%s: 输入分组=0x%04X, 子密钥=0x%04X", prefix, block, key)
-	log.Printf("%s: 轮密钥=%v", prefix, roundKeys)
-
 	state := uint16ToState(block)
-	logState(fmt.Sprintf("%s: 初始状态", prefix), state)
 
 	state = addRoundKey(state, roundKeys[2])
-	logState(fmt.Sprintf("%s: 执行 addRoundKey(K2)", prefix), state)
-
 	state = invShiftRows(state)
-	logState(fmt.Sprintf("%s: 执行首次 invShiftRows", prefix), state)
-
 	state = subNib(state, invSBox)
-	logState(fmt.Sprintf("%s: 执行首次 subNib→invSBox", prefix), state)
-
 	state = addRoundKey(state, roundKeys[1])
-	logState(fmt.Sprintf("%s: 执行 addRoundKey(K1)", prefix), state)
-
 	state = invMixColumns(state)
-	logState(fmt.Sprintf("%s: 执行 invMixColumns", prefix), state)
-
 	state = invShiftRows(state)
-	logState(fmt.Sprintf("%s: 执行第二次 invShiftRows", prefix), state)
-
 	state = subNib(state, invSBox)
-	logState(fmt.Sprintf("%s: 执行第二次 subNib→invSBox", prefix), state)
-
 	state = addRoundKey(state, roundKeys[0])
-	logState(fmt.Sprintf("%s: 执行 addRoundKey(K0)", prefix), state)
 
-	result := stateToUint16(state)
-	log.Printf("%s: 输出分组=0x%04X", prefix, result)
-	return result
+	return stateToUint16(state)
 }
 
 func wordPairToRoundKey(high, low byte) [4]byte {
-	result := [4]byte{
-		(high >> 4) & 0x0F,
-		high & 0x0F,
-		(low >> 4) & 0x0F,
-		low & 0x0F,
-	}
-	log.Printf("wordPairToRoundKey: 输入=(0x%02X,0x%02X), 输出=%v", high, low, result)
-	return result
+	return wordPairToRoundKeyCore(high, low)
 }
 
 func rotNib(w byte) byte {
@@ -303,14 +233,7 @@ func expandKey(key uint16) [3][4]byte {
 }
 
 func uint16ToState(value uint16) [4]byte {
-	result := [4]byte{
-		byte((value >> 12) & 0x0F),
-		byte((value >> 8) & 0x0F),
-		byte((value >> 4) & 0x0F),
-		byte(value & 0x0F),
-	}
-	log.Printf("uint16ToState: 输入=0x%04X, 输出=%v", value, result)
-	return result
+	return uint16ToStateCore(value)
 }
 
 func stateToUint16(state [4]byte) uint16 {
@@ -321,95 +244,35 @@ func stateToUint16(state [4]byte) uint16 {
 }
 
 func addRoundKey(state [4]byte, roundKey [4]byte) [4]byte {
-	original := state
-	for i := range state {
-		state[i] ^= roundKey[i]
-	}
-	log.Printf("addRoundKey: 输入状态=%v, 轮密钥=%v, 输出状态=%v", original, roundKey, state)
-	return state
+	return addRoundKeyCore(state, roundKey)
 }
 
 func subNib(state [4]byte, box [16]byte) [4]byte {
-	original := state
-	for i, v := range state {
-		state[i] = box[v&0x0F]
-	}
-	log.Printf("subNib: 输入状态=%v, 输出状态=%v", original, state)
-	return state
+	return subNibCore(state, box)
 }
 
 func shiftRows(state [4]byte) [4]byte {
-	original := state
-	state[2], state[3] = state[3], state[2]
-	log.Printf("shiftRows: 输入状态=%v, 输出状态=%v", original, state)
-	return state
+	return shiftRowsCore(state)
 }
 
 func invShiftRows(state [4]byte) [4]byte {
-	original := state
-	state[2], state[3] = state[3], state[2]
-	log.Printf("invShiftRows: 输入状态=%v, 输出状态=%v", original, state)
-	return state
+	return invShiftRowsCore(state)
 }
 
 func mixColumns(state [4]byte) [4]byte {
-	a, c := state[0], state[2]
-	b, d := state[1], state[3]
-	result := [4]byte{
-		gfMul(0x1, a) ^ gfMul(0x4, c),
-		gfMul(0x1, b) ^ gfMul(0x4, d),
-		gfMul(0x4, a) ^ gfMul(0x1, c),
-		gfMul(0x4, b) ^ gfMul(0x1, d),
-	}
-	log.Printf("mixColumns: 输入状态=%v, 输出状态=%v", state, result)
-	return result
+	return mixColumnsCore(state)
 }
 
 func invMixColumns(state [4]byte) [4]byte {
-	a, c := state[0], state[2]
-	b, d := state[1], state[3]
-	result := [4]byte{
-		gfMul(0x9, a) ^ gfMul(0x2, c),
-		gfMul(0x9, b) ^ gfMul(0x2, d),
-		gfMul(0x2, a) ^ gfMul(0x9, c),
-		gfMul(0x2, b) ^ gfMul(0x9, d),
-	}
-	log.Printf("invMixColumns: 输入状态=%v, 输出状态=%v", state, result)
-	return result
+	return invMixColumnsCore(state)
 }
 
 func gfMul(a, b byte) byte {
-	var res byte
-	x := a & 0x0F
-	y := b & 0x0F
-
-	for i := 0; i < 4; i++ {
-		if (y & 0x1) != 0 {
-			res ^= x
-		}
-
-		overflow := (x & 0x8) != 0
-		x = (x << 1) & 0x0F
-		if overflow {
-			x ^= 0x3
-		}
-
-		y >>= 1
-	}
-
-	final := res & 0x0F
-	log.Printf("gfMul: 乘数=%d, 被乘数=%d, 结果=0x%X", a&0x0F, b&0x0F, final)
-	return final
-}
-
-func logState(label string, state [4]byte) {
-	log.Printf("%s -> 状态=%v (0x%04X)", label, state, stateToUint16(state))
+	return gfMulCore(a, b)
 }
 
 // EncryptASCIIToBase64 将 ASCII 明文（按 2 字节分组）转换为 Base64 编码的密文。
 func EncryptASCIIToBase64(plaintext, key string) (string, error) {
-	log.Printf("EncryptASCIIToBase64: 输入明文=%q, 密钥=%s", plaintext, key)
-
 	if len(plaintext) == 0 {
 		return "", fmt.Errorf("明文不能为空")
 	}
@@ -419,22 +282,15 @@ func EncryptASCIIToBase64(plaintext, key string) (string, error) {
 		}
 	}
 
-	sanitizedKey, k1, k2, isDouble, err := parseKey(key)
+	_, k1, k2, isDouble, err := parseKey(key)
 	if err != nil {
-		log.Printf("EncryptASCIIToBase64: 解析密钥失败: %v", err)
 		return "", fmt.Errorf("无法解析二进制密钥: %w", err)
-	}
-	if isDouble {
-		log.Printf("EncryptASCIIToBase64: 使用 32 位密钥 %s (K1=0x%04X, K2=0x%04X)", sanitizedKey, k1, k2)
-	} else {
-		log.Printf("EncryptASCIIToBase64: 使用 16 位密钥 %s", sanitizedKey)
 	}
 
 	rawBytes := []byte(plaintext)
 	needsPadding := len(rawBytes)%2 != 0
 	if needsPadding {
 		rawBytes = append(rawBytes, 0x00)
-		log.Printf("EncryptASCIIToBase64: 明文长度为奇数，已自动补齐 0x00")
 	}
 
 	cipherBytes := make([]byte, 0, len(rawBytes))
@@ -443,25 +299,21 @@ func EncryptASCIIToBase64(plaintext, key string) (string, error) {
 		high := rawBytes[i]
 		low := rawBytes[i+1]
 		block := (uint16(high) << 8) | uint16(low)
-		label := fmt.Sprintf("EncryptASCIIToBase64: 分组 %d", (i/2)+1)
 		var enc uint16
 		if isDouble {
-			enc = doubleEncrypt(block, k1, k2, label)
+			enc = doubleEncrypt(block, k1, k2)
 		} else {
-			enc = encryptBlock(block, k1, label)
+			enc = encryptBlock(block, k1)
 		}
 		cipherBytes = append(cipherBytes, byte(enc>>8), byte(enc&0xFF))
 	}
 
 	encoded := base64.StdEncoding.EncodeToString(cipherBytes)
-	log.Printf("EncryptASCIIToBase64: 输出 Base64 密文=%s", encoded)
 	return encoded, nil
 }
 
 // DecryptBase64ToASCII 将 Base64 编码的密文解密为 ASCII 明文。
 func DecryptBase64ToASCII(ciphertext, key string) (string, error) {
-	log.Printf("DecryptBase64ToASCII: 输入密文=%s, 密钥=%s", ciphertext, key)
-
 	sanitizedCipher := strings.TrimSpace(ciphertext)
 	if sanitizedCipher == "" {
 		return "", fmt.Errorf("密文不能为空")
@@ -475,15 +327,9 @@ func DecryptBase64ToASCII(ciphertext, key string) (string, error) {
 		return "", fmt.Errorf("密文字节长度必须是 2 的倍数")
 	}
 
-	sanitizedKey, k1, k2, isDouble, err := parseKey(key)
+	_, k1, k2, isDouble, err := parseKey(key)
 	if err != nil {
-		log.Printf("DecryptBase64ToASCII: 解析密钥失败: %v", err)
 		return "", fmt.Errorf("无法解析二进制密钥: %w", err)
-	}
-	if isDouble {
-		log.Printf("DecryptBase64ToASCII: 使用 32 位密钥 %s (K1=0x%04X, K2=0x%04X)", sanitizedKey, k1, k2)
-	} else {
-		log.Printf("DecryptBase64ToASCII: 使用 16 位密钥 %s", sanitizedKey)
 	}
 
 	resultBytes := make([]byte, 0, len(cipherBytes))
@@ -492,12 +338,11 @@ func DecryptBase64ToASCII(ciphertext, key string) (string, error) {
 		high := cipherBytes[i]
 		low := cipherBytes[i+1]
 		block := (uint16(high) << 8) | uint16(low)
-		label := fmt.Sprintf("DecryptBase64ToASCII: 分组 %d", (i/2)+1)
 		var dec uint16
 		if isDouble {
-			dec = doubleDecrypt(block, k1, k2, label)
+			dec = doubleDecrypt(block, k1, k2)
 		} else {
-			dec = decryptBlock(block, k1, label)
+			dec = decryptBlock(block, k1)
 		}
 		resultBytes = append(resultBytes, byte(dec>>8), byte(dec&0xFF))
 	}
@@ -514,6 +359,5 @@ func DecryptBase64ToASCII(ciphertext, key string) (string, error) {
 		}
 	}
 
-	log.Printf("DecryptBase64ToASCII: 输出明文=%q", result)
 	return result, nil
 }

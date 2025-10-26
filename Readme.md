@@ -192,6 +192,82 @@
 - **注意事项**
   - Base64 解码后的字节长度必须为 2 的倍数，否则将返回错误。
 
+## 5. 中间相遇攻击接口
+- **URL**：`/attack/meet-in-the-middle`
+- **Method**：`POST`
+- **请求体**
+  ```json
+  {
+    "pairs": [
+      {
+        "plaintext": "0x6574",
+        "ciphertext": "0x9920"
+      }
+    ]
+  }
+  ```
+  - `pairs` 至少包含一组 16 bit 明文与密文，可同时提供多组以减少伪碰撞。
+- **响应体**
+  ```json
+  {
+    "code": 0,
+    "message": "success",
+    "data": {
+      "count": 1,
+      "keys": [
+        {
+          "k1_hex": "0x1010",
+          "k1_bin": "0001000000010000",
+          "k2_hex": "0xF0F0",
+          "k2_bin": "1111000011110000",
+          "combined_hex": "0x1010F0F0",
+          "combined_bin": "00010000000100001111000011110000"
+        }
+      ]
+    }
+  }
+  ```
+  - `count` 表示匹配到的密钥数量，可能大于 1。
+  - `keys` 返回所有候选 `(K1, K2)`，同时提供二进制与十六进制形式。
+- **示例**
+  ```http
+  POST /attack/meet-in-the-middle HTTP/1.1
+  Host: localhost:8080
+  Content-Type: application/json
+
+  {
+    "pairs": [
+      {
+        "plaintext": "0x6574",
+        "ciphertext": "0x9920"
+      }
+    ]
+  }
+  ```
+  ```json
+  HTTP/1.1 200 OK
+  {
+    "code": 0,
+    "message": "success",
+    "data": {
+      "count": 1,
+      "keys": [
+        {
+          "k1_hex": "0x1010",
+          "k1_bin": "0001000000010000",
+          "k2_hex": "0xF0F0",
+          "k2_bin": "1111000011110000",
+          "combined_hex": "0x1010F0F0",
+          "combined_bin": "00010000000100001111000011110000"
+        }
+      ]
+    }
+  }
+  ```
+- **注意事项**
+  - 如果只提供一组明密文，可能存在多个候选密钥，请结合额外数据进行筛选。
+  - 接口默认针对 32 bit 密钥的双重加密场景（K1 → K2）。
+
 ## 附：32 位密钥双重加解密示例
 - **加密示例**
   ```http
