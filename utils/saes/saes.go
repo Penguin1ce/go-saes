@@ -147,11 +147,16 @@ func wordPairToRoundKey(high, low byte) [4]byte {
 	return result
 }
 
+func rotNib(w byte) byte {
+	return ((w << 4) | (w >> 4)) & 0xFF
+}
+
 func g(word, rcon byte) byte {
-	a := (word >> 4) & 0x0F
-	b := word & 0x0F
-	out := (sBox[a] << 4) | sBox[b]
-	return out ^ rcon
+	w := rotNib(word) // ① 先 RotNib（教材要求）
+	a := (w >> 4) & 0x0F
+	b := w & 0x0F
+	out := (sBox[a] << 4) | sBox[b] // ② 再 SubNib
+	return out ^ rcon               // ③ 最后 XOR Rcon
 }
 
 func expandKey(key uint16) [3][4]byte {
