@@ -97,37 +97,85 @@ func parseBinary(input string, bits int) (uint64, string, error) {
 }
 
 func parseBinary16(input string) (uint16, error) {
-	value, sanitized, err := parseBinary(input, 16)
+	value := sanitizeBinaryString(input)
+	lower := strings.ToLower(value)
+	if strings.HasPrefix(lower, "0x") {
+		hexPart := value[2:]
+		if len(hexPart) != 4 {
+			return 0, fmt.Errorf("十六进制输入必须包含 4 个十六进制字符")
+		}
+		parsed, err := strconv.ParseUint(hexPart, 16, 16)
+		if err != nil {
+			return 0, fmt.Errorf("无法解析十六进制输入: %w", err)
+		}
+		res := uint16(parsed)
+		log.Printf("parseBinary16: 输入(HEX)=%s, 输出=0x%04X", strings.ToUpper(value), res)
+		return res, nil
+	}
+
+	parsed, sanitized, err := parseBinary(value, 16)
 	if err != nil {
 		return 0, err
 	}
 
-	res := uint16(value)
-	log.Printf("parseBinary16: 输入=%s, 输出=0x%04X", sanitized, res)
+	res := uint16(parsed)
+	log.Printf("parseBinary16: 输入(BIN)=%s, 输出=0x%04X", sanitized, res)
 	return res, nil
 }
 
 func parseKey(key string) (string, uint16, uint16, bool, error) {
 	sanitized := sanitizeBinaryString(key)
+	if sanitized == "" {
+		return "", 0, 0, false, fmt.Errorf("密钥不能为空")
+	}
+
+	lower := strings.ToLower(sanitized)
+	if strings.HasPrefix(lower, "0x") {
+		hexPart := sanitized[2:]
+		switch len(hexPart) {
+		case 4:
+			parsed, err := strconv.ParseUint(hexPart, 16, 16)
+			if err != nil {
+				return "", 0, 0, false, fmt.Errorf("无法解析十六进制密钥: %w", err)
+			}
+			k1 := uint16(parsed)
+			formatted := "0x" + strings.ToUpper(hexPart)
+			log.Printf("parseKey: 输入=%s, 模式=单轮(HEX), K=0x%04X", formatted, k1)
+			return formatted, k1, 0, false, nil
+		case 8:
+			parsed, err := strconv.ParseUint(hexPart, 16, 32)
+			if err != nil {
+				return "", 0, 0, false, fmt.Errorf("无法解析十六进制密钥: %w", err)
+			}
+			k1 := uint16(parsed >> 16)
+			k2 := uint16(parsed & 0xFFFF)
+			formatted := "0x" + strings.ToUpper(hexPart)
+			log.Printf("parseKey: 输入=%s, 模式=双重(HEX), K1=0x%04X, K2=0x%04X", formatted, k1, k2)
+			return formatted, k1, k2, true, nil
+		default:
+			return "", 0, 0, false, fmt.Errorf("十六进制密钥长度必须为 4 或 8 个字符")
+		}
+	}
+
 	switch len(sanitized) {
 	case 16:
 		k1, err := parseBinary16(sanitized)
 		if err != nil {
 			return "", 0, 0, false, err
 		}
-		log.Printf("parseKey: 输入=%s, 模式=单轮, K=0x%04X", sanitized, k1)
+		log.Printf("parseKey: 输入=%s, 模式=单轮(BIN), K=0x%04X", sanitized, k1)
 		return sanitized, k1, 0, false, nil
 	case 32:
-		value, _, err := parseBinary(sanitized, 32)
+		parsed, binary, err := parseBinary(sanitized, 32)
 		if err != nil {
 			return "", 0, 0, false, err
 		}
-		k1 := uint16(value >> 16)
-		k2 := uint16(value & 0xFFFF)
-		log.Printf("parseKey: 输入=%s, 模式=双重, K1=0x%04X, K2=0x%04X", sanitized, k1, k2)
-		return sanitized, k1, k2, true, nil
+		k1 := uint16(parsed >> 16)
+		k2 := uint16(parsed & 0xFFFF)
+		log.Printf("parseKey: 输入=%s, 模式=双重(BIN), K1=0x%04X, K2=0x%04X", binary, k1, k2)
+		return binary, k1, k2, true, nil
 	default:
-		return "", 0, 0, false, fmt.Errorf("密钥必须是16位或32位二进制字符串")
+		return "", 0, 0, false, fmt.Errorf("密钥必须是16位或32位二进制字符串，或对应长度的十六进制字符串（可带0x前缀）")
 	}
 }
 
