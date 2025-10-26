@@ -3,6 +3,7 @@
 ## 基础信息
 - 服务地址：`http://localhost:8080`
 - 统一请求头：`Content-Type: application/json`
+- 密钥说明：支持 16 位或 32 位二进制密钥。16 位密钥执行标准 S-AES 单轮加/解密；32 位密钥将拆分为 K1、K2 顺序执行双重 S-AES。
 
 ## 1. 加密接口
 - **URL**：`/encrypt`
@@ -11,7 +12,7 @@
   ```json
   {
     "plaintext": "明文（16 位二进制字符串）",
-    "key": "密钥（16 位二进制字符串）"
+    "key": "密钥（16 位或 32 位二进制字符串）"
   }
   ```
 - **响应体**
@@ -60,7 +61,7 @@
   ```json
   {
     "ciphertext": "密文（16 位二进制字符串）",
-    "key": "密钥（16 位二进制字符串）"
+    "key": "密钥（16 位或 32 位二进制字符串）"
   }
   ```
 - **响应体**
@@ -109,7 +110,7 @@
   ```json
   {
     "plaintext": "明文（ASCII 字符串，自动补齐到 16 bit 分组）",
-    "key": "密钥（16 位二进制字符串）"
+    "key": "密钥（16 位或 32 位二进制字符串）"
   }
   ```
 - **响应体**
@@ -153,7 +154,7 @@
   ```json
   {
     "ciphertext": "密文（Base64 编码字符串）",
-    "key": "密钥（16 位二进制字符串）"
+    "key": "密钥（16 位或 32 位二进制字符串）"
   }
   ```
 - **响应体**
@@ -189,6 +190,50 @@
   ```
 - **注意事项**
   - Base64 解码后的字节长度必须为 2 的倍数，否则将返回错误。
+
+## 附：32 位密钥双重加解密示例
+- **加密示例**
+  ```http
+  POST /encrypt HTTP/1.1
+  Host: localhost:8080
+  Content-Type: application/json
+
+  {
+    "plaintext": "0110010101110100",
+    "key": "00010000000100001111000011110000"
+  }
+  ```
+  ```json
+  HTTP/1.1 200 OK
+  {
+    "code": 0,
+    "message": "success",
+    "data": {
+      "ciphertext": "1001100100100000"
+    }
+  }
+  ```
+- **Base64 加密示例**
+  ```http
+  POST /encrypt/base64 HTTP/1.1
+  Host: localhost:8080
+  Content-Type: application/json
+
+  {
+    "plaintext": "et",
+    "key": "00010000000100001111000011110000"
+  }
+  ```
+  ```json
+  HTTP/1.1 200 OK
+  {
+    "code": 0,
+    "message": "success",
+    "data": {
+      "ciphertext": "mSA="
+    }
+  }
+  ```
 
 ## 错误码说明
 - `200`：请求成功。
