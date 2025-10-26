@@ -7,6 +7,7 @@
     <main class="app-main">
       <encrypt-decrypt-panel />
       <multi-encrypt-panel class="multi-panel" />
+      <meet-in-the-middle-panel class="mitm-panel" />
     </main>
   </div>
 </template>
@@ -14,6 +15,7 @@
 <script setup>
 import EncryptDecryptPanel from './components/EncryptDecryptPanel.vue';
 import MultiEncryptPanel from './components/MultiEncryptPanel.vue';
+import MeetInTheMiddlePanel from './components/MeetInTheMiddlePanel.vue';
 </script>
 
 <style scoped>
@@ -54,6 +56,10 @@ import MultiEncryptPanel from './components/MultiEncryptPanel.vue';
 }
 
 .multi-panel {
+  margin-top: 8px;
+}
+
+.mitm-panel {
   margin-top: 8px;
 }
 </style>
