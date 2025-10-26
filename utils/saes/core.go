@@ -142,6 +142,14 @@ func doubleEncryptCore(block, k1, k2 uint16) uint16 {
 	return encryptBlockCore(encryptBlockCore(block, k1), k2)
 }
 
+func tripleEncryptCore(block, k1, k2, k3 uint16) uint16 {
+	return encryptBlockCore(encryptBlockCore(encryptBlockCore(block, k1), k2), k3)
+}
+
+func tripleDecryptCore(block, k1, k2, k3 uint16) uint16 {
+	return decryptBlockCore(decryptBlockCore(decryptBlockCore(block, k3), k2), k1)
+}
+
 // 导出给其它包使用的无日志版本。
 
 func EncryptBlockRaw(block, key uint16) uint16 {
@@ -154,4 +162,12 @@ func DecryptBlockRaw(block, key uint16) uint16 {
 
 func DoubleEncryptRaw(block, k1, k2 uint16) uint16 {
 	return doubleEncryptCore(block, k1, k2)
+}
+
+func TripleEncryptRaw(block, k1, k2, k3 uint16) uint16 {
+	return tripleEncryptCore(block, k1, k2, k3)
+}
+
+func TripleDecryptRaw(block, k1, k2, k3 uint16) uint16 {
+	return tripleDecryptCore(block, k1, k2, k3)
 }

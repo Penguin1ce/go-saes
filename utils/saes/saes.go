@@ -20,17 +20,12 @@ func EncryptBinary(plaintext, key string) (string, error) {
 		return "", fmt.Errorf("无法解析二进制明文: %w", err)
 	}
 
-	_, k1, k2, isDouble, err := parseKey(key)
+	_, keys, err := parseKey(key)
 	if err != nil {
 		return "", fmt.Errorf("无法解析二进制密钥: %w", err)
 	}
 
-	var block uint16
-	if isDouble {
-		block = doubleEncrypt(pt, k1, k2)
-	} else {
-		block = encryptBlock(pt, k1)
-	}
+	block := encryptWithKeys(pt, keys)
 	result := fmt.Sprintf("%016b", block)
 	return result, nil
 }
@@ -42,17 +37,12 @@ func DecryptBinary(ciphertext, key string) (string, error) {
 		return "", fmt.Errorf("无法解析二进制密文: %w", err)
 	}
 
-	_, k1, k2, isDouble, err := parseKey(key)
+	_, keys, err := parseKey(key)
 	if err != nil {
 		return "", fmt.Errorf("无法解析二进制密钥: %w", err)
 	}
 
-	var block uint16
-	if isDouble {
-		block = doubleDecrypt(ct, k1, k2)
-	} else {
-		block = decryptBlock(ct, k1)
-	}
+	block := decryptWithKeys(ct, keys)
 	result := fmt.Sprintf("%016b", block)
 	return result, nil
 }
@@ -106,10 +96,10 @@ func parseBinary16(input string) (uint16, error) {
 	return res, nil
 }
 
-func parseKey(key string) (string, uint16, uint16, bool, error) {
+func parseKey(key string) (string, []uint16, error) {
 	sanitized := sanitizeBinaryString(key)
 	if sanitized == "" {
-		return "", 0, 0, false, fmt.Errorf("密钥不能为空")
+		return "", nil, fmt.Errorf("密钥不能为空")
 	}
 
 	lower := strings.ToLower(sanitized)
@@ -119,22 +109,32 @@ func parseKey(key string) (string, uint16, uint16, bool, error) {
 		case 4:
 			parsed, err := strconv.ParseUint(hexPart, 16, 16)
 			if err != nil {
-				return "", 0, 0, false, fmt.Errorf("无法解析十六进制密钥: %w", err)
+				return "", nil, fmt.Errorf("无法解析十六进制密钥: %w", err)
 			}
 			k1 := uint16(parsed)
 			formatted := "0x" + strings.ToUpper(hexPart)
-			return formatted, k1, 0, false, nil
+			return formatted, []uint16{k1}, nil
 		case 8:
 			parsed, err := strconv.ParseUint(hexPart, 16, 32)
 			if err != nil {
-				return "", 0, 0, false, fmt.Errorf("无法解析十六进制密钥: %w", err)
+				return "", nil, fmt.Errorf("无法解析十六进制密钥: %w", err)
 			}
 			k1 := uint16(parsed >> 16)
 			k2 := uint16(parsed & 0xFFFF)
 			formatted := "0x" + strings.ToUpper(hexPart)
-			return formatted, k1, k2, true, nil
+			return formatted, []uint16{k1, k2}, nil
+		case 12:
+			parsed, err := strconv.ParseUint(hexPart, 16, 64)
+			if err != nil {
+				return "", nil, fmt.Errorf("无法解析十六进制密钥: %w", err)
+			}
+			k1 := uint16(parsed >> 32)
+			k2 := uint16((parsed >> 16) & 0xFFFF)
+			k3 := uint16(parsed & 0xFFFF)
+			formatted := "0x" + strings.ToUpper(hexPart)
+			return formatted, []uint16{k1, k2, k3}, nil
 		default:
-			return "", 0, 0, false, fmt.Errorf("十六进制密钥长度必须为 4 或 8 个字符")
+			return "", nil, fmt.Errorf("十六进制密钥长度必须为 4、8 或 12 个字符")
 		}
 	}
 
@@ -142,30 +142,51 @@ func parseKey(key string) (string, uint16, uint16, bool, error) {
 	case 16:
 		k1, err := parseBinary16(sanitized)
 		if err != nil {
-			return "", 0, 0, false, err
+			return "", nil, err
 		}
-		return sanitized, k1, 0, false, nil
+		return sanitized, []uint16{k1}, nil
 	case 32:
 		parsed, binary, err := parseBinary(sanitized, 32)
 		if err != nil {
-			return "", 0, 0, false, err
+			return "", nil, err
 		}
 		k1 := uint16(parsed >> 16)
 		k2 := uint16(parsed & 0xFFFF)
-		return binary, k1, k2, true, nil
+		return binary, []uint16{k1, k2}, nil
+	case 48:
+		parsed, binary, err := parseBinary(sanitized, 48)
+		if err != nil {
+			return "", nil, err
+		}
+		k1 := uint16(parsed >> 32)
+		k2 := uint16((parsed >> 16) & 0xFFFF)
+		k3 := uint16(parsed & 0xFFFF)
+		return binary, []uint16{k1, k2, k3}, nil
 	default:
-		return "", 0, 0, false, fmt.Errorf("密钥必须是16位或32位二进制字符串，或对应长度的十六进制字符串（可带0x前缀）")
+		return "", nil, fmt.Errorf("密钥必须是16、32或48位二进制字符串，或对应长度的十六进制字符串（可带0x前缀）")
 	}
 }
 
-func doubleEncrypt(block uint16, k1, k2 uint16) uint16 {
-	first := encryptBlock(block, k1)
-	return encryptBlock(first, k2)
+func encryptWithKeys(block uint16, keys []uint16) uint16 {
+	if len(keys) == 0 {
+		return block
+	}
+	out := block
+	for _, k := range keys {
+		out = encryptBlock(out, k)
+	}
+	return out
 }
 
-func doubleDecrypt(block uint16, k1, k2 uint16) uint16 {
-	first := decryptBlock(block, k2)
-	return decryptBlock(first, k1)
+func decryptWithKeys(block uint16, keys []uint16) uint16 {
+	if len(keys) == 0 {
+		return block
+	}
+	out := block
+	for i := len(keys) - 1; i >= 0; i-- {
+		out = decryptBlock(out, keys[i])
+	}
+	return out
 }
 
 func encryptBlock(block uint16, key uint16) uint16 {
@@ -282,7 +303,7 @@ func EncryptASCIIToBase64(plaintext, key string) (string, error) {
 		}
 	}
 
-	_, k1, k2, isDouble, err := parseKey(key)
+	_, keys, err := parseKey(key)
 	if err != nil {
 		return "", fmt.Errorf("无法解析二进制密钥: %w", err)
 	}
@@ -299,12 +320,7 @@ func EncryptASCIIToBase64(plaintext, key string) (string, error) {
 		high := rawBytes[i]
 		low := rawBytes[i+1]
 		block := (uint16(high) << 8) | uint16(low)
-		var enc uint16
-		if isDouble {
-			enc = doubleEncrypt(block, k1, k2)
-		} else {
-			enc = encryptBlock(block, k1)
-		}
+		enc := encryptWithKeys(block, keys)
 		cipherBytes = append(cipherBytes, byte(enc>>8), byte(enc&0xFF))
 	}
 
@@ -327,7 +343,7 @@ func DecryptBase64ToASCII(ciphertext, key string) (string, error) {
 		return "", fmt.Errorf("密文字节长度必须是 2 的倍数")
 	}
 
-	_, k1, k2, isDouble, err := parseKey(key)
+	_, keys, err := parseKey(key)
 	if err != nil {
 		return "", fmt.Errorf("无法解析二进制密钥: %w", err)
 	}
@@ -338,12 +354,7 @@ func DecryptBase64ToASCII(ciphertext, key string) (string, error) {
 		high := cipherBytes[i]
 		low := cipherBytes[i+1]
 		block := (uint16(high) << 8) | uint16(low)
-		var dec uint16
-		if isDouble {
-			dec = doubleDecrypt(block, k1, k2)
-		} else {
-			dec = decryptBlock(block, k1)
-		}
+		dec := decryptWithKeys(block, keys)
 		resultBytes = append(resultBytes, byte(dec>>8), byte(dec&0xFF))
 	}
 
