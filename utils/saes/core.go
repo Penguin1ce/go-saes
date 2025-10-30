@@ -38,34 +38,34 @@ func subNibCore(state state4, box [16]byte) state4 {
 }
 
 func shiftRowsCore(state state4) state4 {
-	state[2], state[3] = state[3], state[2]
+	state[1], state[3] = state[3], state[1]
 	return state
 }
 
 func invShiftRowsCore(state state4) state4 {
-	state[2], state[3] = state[3], state[2]
+	state[1], state[3] = state[3], state[1]
 	return state
 }
 
 func mixColumnsCore(state state4) state4 {
-	a, c := state[0], state[2]
-	b, d := state[1], state[3]
+	a, b := state[0], state[1]
+	c, d := state[2], state[3]
 	return state4{
-		gfMulCore(0x1, a) ^ gfMulCore(0x4, c),
-		gfMulCore(0x1, b) ^ gfMulCore(0x4, d),
-		gfMulCore(0x4, a) ^ gfMulCore(0x1, c),
-		gfMulCore(0x4, b) ^ gfMulCore(0x1, d),
+		gfMulCore(0x1, a) ^ gfMulCore(0x4, b),
+		gfMulCore(0x4, a) ^ gfMulCore(0x1, b),
+		gfMulCore(0x1, c) ^ gfMulCore(0x4, d),
+		gfMulCore(0x4, c) ^ gfMulCore(0x1, d),
 	}
 }
 
 func invMixColumnsCore(state state4) state4 {
-	a, c := state[0], state[2]
-	b, d := state[1], state[3]
+	a, b := state[0], state[1]
+	c, d := state[2], state[3]
 	return state4{
-		gfMulCore(0x9, a) ^ gfMulCore(0x2, c),
-		gfMulCore(0x9, b) ^ gfMulCore(0x2, d),
-		gfMulCore(0x2, a) ^ gfMulCore(0x9, c),
-		gfMulCore(0x2, b) ^ gfMulCore(0x9, d),
+		gfMulCore(0x9, a) ^ gfMulCore(0x2, b),
+		gfMulCore(0x2, a) ^ gfMulCore(0x9, b),
+		gfMulCore(0x9, c) ^ gfMulCore(0x2, d),
+		gfMulCore(0x2, c) ^ gfMulCore(0x9, d),
 	}
 }
 
