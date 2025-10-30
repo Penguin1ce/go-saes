@@ -2,31 +2,35 @@
 
 ## 基本信息
 
-![image-20251026231750883](doc/assets/image-20251026231750883.png)
+![image-20251031001712216](doc/assets/image-20251031001712216.png)
+
+![image-20251031001744015](doc/assets/image-20251031001744015.png)
+
+![image-20251031001757484](doc/assets/image-20251031001757484.png)
+
+![image-20251031001808865](doc/assets/image-20251031001808865.png)
 
 
-
-![image-20251026231810888](doc/assets/image-20251026231810888.png)
-
-
-
-![image-20251026231829898](doc/assets/image-20251026231829898.png)
-
-
-
-![image-20251026231845685](doc/assets/image-20251026231845685.png)
 
 ## 关卡1 基本测试
 
-![image-20251026231957029](doc/assets/image-20251026231957029.png)
+输入明文1234和密钥4567，得到密文
+
+![image-20251031001926440](doc/assets/image-20251031001926440.png)
+
+解密得到
+
+![image-20251031002018130](doc/assets/image-20251031002018130.png)
 
 
 
 ## 关卡2 交叉测试
 
-根据和别人相同的明文以及密钥输入，可以发现得到了相同的密文，通过了关卡2的测试
+根据和别人相同的明文以及密钥输入https://gitee.com/H0OD/s-aes
 
+可以发现得到了相同的密文，通过了关卡2的测试
 
+我们约定使用列序列作为标准计算，保持和教材一致
 
 ## 关卡3 扩展功能
 
@@ -34,9 +38,17 @@
 
 使用Base64返回字符串，防止出现乱码
 
-![image-20251026232241102](doc/assets/image-20251026232241102.png)
+输入明文：`I love CQU`，密钥：`0x1234`，获得密文：`Qph0n+Gy9SmV/Q==`
 
-![image-20251026232307981](doc/assets/image-20251026232307981.png)
+![image-20251031002227675](doc/assets/image-20251031002227675.png)
+
+解密得到
+
+![image-20251031002408228](doc/assets/image-20251031002408228.png)
+
+
+
+
 
 
 
@@ -48,33 +60,37 @@
 
 加密：
 
-![image-20251026232443335](doc/assets/image-20251026232443335.png)
+![image-20251031002603309](doc/assets/image-20251031002603309.png)
 
 解密：
 
-![image-20251026232538940](doc/assets/image-20251026232538940.png)
+![image-20251031002636013](doc/assets/image-20251031002636013.png)
 
 ### 4.2 中间相遇攻击
 
-输入两个已知的明密文对
+输入两个已知的明密文对，已知密钥为`0x12345678`
 
-![image-20251026232742324](doc/assets/image-20251026232742324.png)
+`0x1234` --> `0x1EC9` 
 
-可以得到两个32位的密钥
+`0x4321` --> `0x9D66`
 
-![image-20251026232803714](doc/assets/image-20251026232803714.png)
+![image-20251031002804430](doc/assets/image-20251031002804430.png)
+
+可以得到2个32位的密钥
+
+![image-20251031002822729](doc/assets/image-20251031002822729.png)
 
 ### 4.3 三重加密
 
-使用 48bits(K1+K2+K3) 的模式进行三重加解密。
+使用 `48bits (K1+K2+K3)` 的模式进行三重加解密。
 
 加密：
 
-![image-20251026232919573](doc/assets/image-20251026232919573.png)
+![image-20251031003107338](doc/assets/image-20251031003107338.png)
 
 解密：
 
-![image-20251026233007431](doc/assets/image-20251026233007431.png)
+![image-20251031003130068](doc/assets/image-20251031003130068.png)
 
 可以看到通过测试
 
@@ -84,17 +100,25 @@
 
 我们使用后端自动生成初始向量，返回给前端。
 
-![image-20251026233504106](doc/assets/image-20251026233504106.png)
+输入明文
 
-解密：
+`Cache penetration happens when many requests ask for data that does not exist in the database. Because the data is not in the cache, every request goes directly to the database. The cache cannot help, and the database becomes overloaded.`
 
-![image-20251026233549085](doc/assets/image-20251026233549085.png)
+密钥`0x1234`，后端自动生成初始向量`0x681A`，得到密文
+
+`A0whBMT8vaRUX8EFJDwwdynqnBHElGehvkHCka6ZQRc0P7FOjHrFWpECzgQNW3fb2fEg/XnM9KQBUozI+Bgg4cvM5capBh4p/r6XOBkRBD02PwnkZo6+kGRsVOMe4P522Pnmho0UE8eZBIzsHIH27pfolXqouDGIX4x2ob2xugUM7sgp/Ehqipre5xZVMXihJH5/3ACQdkupqkWGveLEAnEtj8NJBHjhUwmaRtNSfX67J+GQw71TavJGWkcCn4lGhp695tg6twb6Q/TzPkR3Qyu6gd+gnB9UbKmj/VnNolJpfLwAa2zEht0foO4QJQ==`
+
+![image-20251031003431552](doc/assets/image-20251031003431552.png)
+
+解密成功
+
+![image-20251031003630750](doc/assets/image-20251031003630750.png)
 
 在CBC模式下进行加密，并尝试对密文分组进行替换或修改，然后进行解密，请对比篡改密文前后的解密结果。
 
 如果篡改了密文，可以发现：大部分的原本并没有发生改变。
 
-![image-20251026233707651](doc/assets/image-20251026233707651.png)
+![image-20251031003706774](doc/assets/image-20251031003706774.png)
 
 
 
